@@ -59,9 +59,48 @@ Outputs:
 - `reports/variants_fast/variant_results.csv`
 - `reports/variants_fast/leaderboard_top20.csv`
 
+## V2 Regime-Adaptive OOS Simulation
+
+Run from a fixed out-of-sample start date (all prior data treated as training):
+
+```bash
+PYTHONPATH=src ./scripts/simulate_strategy_v2.py --flow-csv data/ibit_flows.csv --price-csv data/btc_prices.csv --out-dir reports/v2_sep2025 --test-start-date 2025-09-01 --confidence-threshold 0.52 --min-abs-return-pct 0.02 --retrain-every 3 --train-lookback-days 365 --tx-cost-bps 2
+```
+
+Key outputs:
+
+- `reports/v2_sep2025/v2_summary.json`
+- `reports/v2_sep2025/v2_timeseries.csv`
+- `reports/v2_sep2025/v2_trade_blotter.csv`
+- `reports/v2_sep2025/v2_portfolio_100usd.png`
+
+Variant sweep:
+
+```bash
+PYTHONPATH=src ./scripts/simulate_strategy_v2_variants.py --flow-csv data/ibit_flows.csv --price-csv data/btc_prices.csv --out-dir reports/v2_variants_sep2025_fast --test-start-date 2025-09-01 --confidence-thresholds 0.50,0.52,0.55 --min-abs-return-pcts 0.00,0.02 --retrain-every-options 3,7 --train-lookback-days-options 0,365 --tx-cost-bps-options 2
+```
+
+## Decision Explainability (Per Variant)
+
+Generate data->signal->decision traces for each V2 variant:
+
+```bash
+python ./scripts/explain_v2_variants.py --variants-dir reports/v2_variants_sep2025_fast --flow-csv data/ibit_flows.csv --price-csv data/btc_prices.csv
+python ./scripts/cleanup_reports.py
+```
+
+Key inspection files:
+
+- `reports/INDEX.md`
+- `reports/v2_variants_sep2025_fast/v2_decision_index.md`
+- `reports/v2_variants_sep2025_fast/v2_variant_decision_summary.csv`
+- `reports/v2_variants_sep2025_fast/v2_variant_signal_drivers.csv`
+- `reports/v2_variants_sep2025_fast/<variant>/v2_decision_trace.csv`
+
 ## Process diagram
 
 - Markdown diagram: `docs/process_diagram.md`
+- Parameter impact diagram: `docs/variant_parameter_flow.md`
 
 ## Testnet deployment
 
