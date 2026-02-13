@@ -1,0 +1,58 @@
+{
+  "global": {
+    "asset": "BTC",
+    "benchmark_tokens": ["BTC", "ETH", "HYPE"],
+    "mm_horizon_seconds": 30,
+    "mm_target_fill_seconds": 30
+  },
+  "strategies": [
+    {
+      "name": "mm_eth_perp",
+      "enabled": true,
+      "account_address": "0xYOUR_TESTNET_ACCOUNT_1",
+      "vault_address": "0xYOUR_TESTNET_VAULT_1",
+      "secret_key_env": "HL_SECRET_KEY_STRAT1",
+      "asset": "ETH",
+      "mm_order_size": 0.01,
+      "mm_max_abs_position": 0.2,
+      "mm_gamma": 0.12,
+      "mm_kappa": 1.5,
+      "mm_min_spread_bps": 5,
+      "mm_max_spread_bps": 90,
+      "mm_horizon_seconds": 30,
+      "mm_target_fill_seconds": 30
+    },
+    {
+      "name": "mm_btc_perp",
+      "enabled": true,
+      "account_address": "0xYOUR_TESTNET_ACCOUNT_2",
+      "vault_address": "0xYOUR_TESTNET_VAULT_2",
+      "secret_key_env": "HL_SECRET_KEY_STRAT2",
+      "asset": "BTC",
+      "mm_order_size": 0.001,
+      "mm_max_abs_position": 0.004,
+      "mm_gamma": 0.15,
+      "mm_kappa": 1.8,
+      "mm_min_spread_bps": 4,
+      "mm_max_spread_bps": 80,
+      "mm_horizon_seconds": 30,
+      "mm_target_fill_seconds": 30
+    },
+    {
+      "name": "mm_hype_perp",
+      "enabled": true,
+      "account_address": "0xYOUR_TESTNET_ACCOUNT_3",
+      "vault_address": "0xYOUR_TESTNET_VAULT_3",
+      "secret_key_env": "HL_SECRET_KEY_STRAT3",
+      "asset": "HYPE",
+      "mm_order_size": 1.0,
+      "mm_max_abs_position": 12.0,
+      "mm_gamma": 0.2,
+      "mm_kappa": 1.2,
+      "mm_min_spread_bps": 12,
+      "mm_max_spread_bps": 250,
+      "mm_horizon_seconds": 30,
+      "mm_target_fill_seconds": 30
+    }
+  ]
+}

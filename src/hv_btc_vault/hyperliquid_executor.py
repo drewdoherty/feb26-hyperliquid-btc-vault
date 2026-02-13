@@ -54,6 +54,13 @@ class HyperliquidExecutor:
             raise KeyError(f"Asset {asset} not in mids. Available example: {list(mids.keys())[:10]}")
         return float(mids[asset])
 
+    def asset_sz_decimals(self, asset: str) -> int:
+        meta = self.info.meta()
+        for u in meta.get("universe", []):
+            if u.get("name") == asset:
+                return int(u.get("szDecimals", 0))
+        return 3
+
     def current_position_btc(self, asset: str) -> float:
         if not self.settings.hl_account_address.startswith("0x") or len(self.settings.hl_account_address) != 42:
             return 0.0
@@ -87,11 +94,16 @@ class HyperliquidExecutor:
         if self.exchange is None:
             raise RuntimeError("Live mode requires a valid Exchange client. Check HL_SECRET_KEY and DRY_RUN settings.")
 
+        sz_decimals = self.asset_sz_decimals(asset)
+        rounded_sz = round(abs(delta), sz_decimals)
+        if rounded_sz <= 0:
+            return RebalanceResult(asset, mark, current, target_btc, 0.0, False, None)
+
         self.exchange.update_leverage(1, asset, is_cross=True)
         response = self.exchange.market_open(
             name=asset,
             is_buy=delta > 0,
-            sz=abs(delta),
+            sz=rounded_sz,
             slippage=self.settings.hl_default_slippage,
         )
         return RebalanceResult(asset, mark, current, target_btc, delta, False, response)

@@ -121,6 +121,110 @@ Guardrails:
 - Requires `HL_BASE_URL=https://api.hyperliquid-testnet.xyz`
 - Runs preflight test (`scripts/testnet_smoke.py`) before pipeline/execution
 
+### Multi-strategy deployment (all variants)
+
+1. Edit `config/testnet_strategies.json` (copy from `config/testnet_strategies.example.json`) and set unique testnet account/vault per strategy.
+2. Add each strategy key env var in `.env` (`HL_SECRET_KEY_STRAT1`, `HL_SECRET_KEY_STRAT2`, ...).
+
+Dry-run all strategies:
+
+```bash
+python ./scripts/deploy_strategies_testnet.py --config config/testnet_strategies.json --flow-csv data/ibit_flows.csv --forecast-json data/forecast.json
+```
+
+Live testnet orders for all strategies:
+
+```bash
+python ./scripts/deploy_strategies_testnet.py --config config/testnet_strategies.json --flow-csv data/ibit_flows.csv --forecast-json data/forecast.json --live
+```
+
+Outputs:
+
+- `reports/testnet_deploy/<timestamp>/summary.json`
+- `reports/testnet_deploy/<timestamp>/<strategy>.json`
+
+## Testnet Stoikov Market Making (ETH/BTC/HYPE)
+
+`config/testnet_strategies.json` is configured for:
+
+- `mm_eth_perp` on `ETH`
+- `mm_btc_perp` on `BTC`
+- `mm_hype_perp` on `HYPE`
+
+Reset monitor/history (fresh charts):
+
+```bash
+python ./scripts/reset_monitor_data.py
+```
+
+Reset strategy state (cancel open orders + flatten positions):
+
+```bash
+python ./scripts/reset_testnet_strategies.py --config config/testnet_strategies.json --live
+```
+
+Run Stoikov MM (dry-run):
+
+```bash
+python ./scripts/run_stoikov_mm_testnet.py --config config/testnet_strategies.json --watch --poll-seconds 10
+```
+
+Run Stoikov MM (live testnet orders):
+
+```bash
+python ./scripts/run_stoikov_mm_testnet.py --config config/testnet_strategies.json --watch --poll-seconds 10 --live
+```
+
+### Real-time strategy monitor (orders, fills, portfolio value)
+
+Single snapshot:
+
+```bash
+python ./scripts/monitor_testnet_strategies.py --config config/testnet_strategies.json
+```
+
+Continuous real-time polling:
+
+```bash
+python ./scripts/monitor_testnet_strategies.py --config config/testnet_strategies.json --watch --poll-seconds 15
+```
+
+Monitor outputs:
+
+- `reports/testnet_monitor/latest_summary.md` (live table)
+- `reports/testnet_monitor/latest_snapshot.json`
+- `reports/testnet_monitor/strategy_snapshots.csv` (portfolio/value time series per strategy)
+- `reports/testnet_monitor/open_orders.csv` (open orders observed each poll)
+- `reports/testnet_monitor/fills.csv` (new fills with timestamps and order IDs)
+- `reports/testnet_monitor/market_prices.csv` (real benchmark token prices)
+- `reports/testnet_monitor/snapshots/<timestamp>.json` (full raw snapshot history)
+
+### Local dashboard (auto-refresh)
+
+Start dashboard only (if monitor already running):
+
+```bash
+python ./scripts/serve_testnet_dashboard.py --port 8765
+```
+
+Start dashboard + monitor together:
+
+```bash
+python ./scripts/serve_testnet_dashboard.py --with-monitor --config config/testnet_strategies.json --poll-seconds 15 --port 8765
+```
+
+Dashboard URL:
+
+- `http://127.0.0.1:8765/dashboard`
+
+Dashboard charts now include separate series for:
+
+- Equity in USD (real benchmark)
+- Equity denominated in BTC
+- Equity denominated in ETH
+- Equity denominated in HYPE
+- Real benchmark token price indices
+
 ## Automation schedule
 
 Current cron schedule is daily at 09:15 local time.

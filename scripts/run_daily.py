@@ -18,6 +18,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--flow-csv", default="data/ibit_flows.csv", help="CSV with columns: date,net_flow_usd")
     parser.add_argument("--forecast-json", default="data/forecast.json", help="JSON with expected_return_pct, confidence")
     parser.add_argument(
+        "--min-abs-return-pct",
+        type=float,
+        default=0.10,
+        help="Minimum absolute expected return required before taking a non-flat signal",
+    )
+    parser.add_argument(
         "--allow-heuristic",
         action="store_true",
         help="Use fallback flow->forecast heuristic if forecast JSON is missing",
@@ -45,6 +51,7 @@ def main() -> None:
         forecast=forecast,
         max_abs_position_btc=settings.max_abs_position_btc,
         confidence_threshold=settings.confidence_threshold,
+        min_abs_return_pct=args.min_abs_return_pct,
     )
 
     target = clamp_target(signal.target_position_btc, settings.max_abs_position_btc)
