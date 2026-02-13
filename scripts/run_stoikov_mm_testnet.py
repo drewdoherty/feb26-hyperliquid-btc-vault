@@ -30,6 +30,7 @@ class StrategyRuntime:
     asset: str
     account: str
     vault: str
+    use_vault: bool
     key_env: str
     exchange: Exchange | None
     sz_decimals: int
@@ -132,6 +133,7 @@ def build_strategy_runtimes(
         asset = str(s.get("asset", global_cfg.get("asset", "BTC")))
         account = str(s.get("account_address", ""))
         vault = str(s.get("vault_address", account))
+        use_vault = bool(s.get("use_vault", False))
         key_env = str(s.get("secret_key_env", ""))
         key = os.getenv(key_env, "").strip()
 
@@ -148,7 +150,7 @@ def build_strategy_runtimes(
             exchange = Exchange(
                 wallet,
                 base_url,
-                vault_address=vault,
+                vault_address=vault if use_vault else None,
                 account_address=account,
             )
             try:
@@ -163,6 +165,7 @@ def build_strategy_runtimes(
                 asset=asset,
                 account=account,
                 vault=vault,
+                use_vault=use_vault,
                 key_env=key_env,
                 exchange=exchange,
                 sz_decimals=sz_decimals,
@@ -281,6 +284,7 @@ def main() -> None:
             err = ""
             responses: list[Any] = []
             cancelled = 0
+            err_responses: list[Any] = []
             tif = "Alo"
             bid_px = 0.0
             ask_px = 0.0
@@ -389,6 +393,10 @@ def main() -> None:
                         )
                 else:
                     cancelled = len(asset_orders)
+
+                for r in responses:
+                    if isinstance(r, dict) and r.get("status") == "err":
+                        err_responses.append(r)
             except Exception as exc:
                 err = str(exc)
 
@@ -419,9 +427,13 @@ def main() -> None:
                 },
             )
 
+            resp_flag = ""
+            if err_responses:
+                resp_flag = f" api_errs={len(err_responses)}"
             print(
                 f"  {rt.name} {rt.asset}: pos={position:.6f} bid={bid_px} ask={ask_px} "
                 f"sz=({bid_sz},{ask_sz}) fill_age={fill_age:.1f}s tif={tif} cancelled={cancelled}"
+                + resp_flag
                 + (f" err={err}" if err else "")
             )
 
