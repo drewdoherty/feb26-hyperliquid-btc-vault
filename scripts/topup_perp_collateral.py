@@ -67,6 +67,7 @@ def main() -> None:
         name = str(s.get("name", "unnamed"))
         account = str(s.get("account_address", ""))
         vault = str(s.get("vault_address", account))
+        use_vault = bool(s.get("use_vault", False))
         secret_env = str(s.get("secret_key_env", ""))
         key = os.getenv(secret_env, "").strip()
 
@@ -124,7 +125,7 @@ def main() -> None:
             exchange = Exchange(
                 wallet,
                 args.base_url,
-                vault_address=vault,
+                vault_address=vault if use_vault else None,
                 account_address=account,
             )
             resp = exchange.usd_class_transfer(amount=transfer, to_perp=True)

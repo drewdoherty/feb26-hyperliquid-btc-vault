@@ -68,11 +68,22 @@ def _prepare_chart_payload(
 
     strat_names = sorted({r.get("strategy", "unknown") for r in recent_strat})
     equity_usd_map: dict[str, dict[str, float]] = {s: {} for s in strat_names}
+    real_price_map: dict[str, dict[str, float]] = {s: {} for s in strat_names}
+    fill_count_map: dict[str, dict[str, int]] = {s: {} for s in strat_names}
     for r in recent_strat:
         ts = r.get("snapshot_time_utc", "")
         s = r.get("strategy", "unknown")
         if ts in labels and s in equity_usd_map:
             equity_usd_map[s][ts] = fnum(r.get("account_value_usd", 0), 6)
+            px = fnum(r.get("real_price_usd", 0), 10)
+            if px > 0:
+                real_price_map[s][ts] = px
+            try:
+                fills = int(float(r.get("new_fills", 0) or 0))
+            except Exception:
+                fills = 0
+            if fills > 0:
+                fill_count_map[s][ts] = fills
 
     recent_market = market_rows[-5000:]
     token_price_map: dict[str, dict[str, float]] = {t: {} for t in benchmark_tokens}
@@ -86,6 +97,9 @@ def _prepare_chart_payload(
 
     equity_usd_series = {
         s: [equity_usd_map[s].get(ts, None) for ts in labels] for s in strat_names
+    }
+    price_real_series = {
+        s: [real_price_map[s].get(ts, None) for ts in labels] for s in strat_names
     }
 
     equity_by_token: dict[str, dict[str, list[float | None]]] = {}
@@ -112,12 +126,48 @@ def _prepare_chart_payload(
         else:
             benchmark_index[token] = [round((x / base) * 100.0, 4) if x else None for x in series]
 
+    price_index_by_strategy: dict[str, list[float | None]] = {}
+    fill_markers_by_strategy: dict[str, list[dict[str, Any]]] = {}
+    fill_markers_index_by_strategy: dict[str, list[dict[str, Any]]] = {}
+    for s in strat_names:
+        series = [real_price_map[s].get(ts, None) for ts in labels]
+        first = next((x for x in series if x is not None and x > 0), None)
+        if first is None:
+            index_series = [None for _ in labels]
+            base = None
+        else:
+            base = first
+            index_series = [round((x / base) * 100.0, 4) if x else None for x in series]
+        price_index_by_strategy[s] = index_series
+
+        marker_points: list[dict[str, Any]] = []
+        marker_points_index: list[dict[str, Any]] = []
+        for ts in labels:
+            fills = fill_count_map[s].get(ts, 0)
+            px = real_price_map[s].get(ts)
+            if fills <= 0 or px is None:
+                continue
+            marker_points.append({"x": ts, "y": round(px, 8), "fills": fills})
+            if base and base > 0:
+                marker_points_index.append({"x": ts, "y": round((px / base) * 100.0, 4), "fills": fills})
+        fill_markers_by_strategy[s] = marker_points
+        fill_markers_index_by_strategy[s] = marker_points_index
+
+    token_price_usd = {
+        t: [token_price_map[t].get(ts, None) for ts in labels] for t in benchmark_tokens
+    }
+
     return {
         "labels": labels,
         "strategies": strat_names,
         "equity_usd": equity_usd_series,
         "equity_by_token": equity_by_token,
         "benchmark_index": benchmark_index,
+        "token_price_usd": token_price_usd,
+        "price_real_by_strategy": price_real_series,
+        "price_index_by_strategy": price_index_by_strategy,
+        "fill_markers_by_strategy": fill_markers_by_strategy,
+        "fill_markers_index_by_strategy": fill_markers_index_by_strategy,
     }
 
 
@@ -245,6 +295,16 @@ def render_dashboard(monitor_dir: Path) -> str:
     </div>
 
     <div class=\"panel\">
+      <h3>Real Price Evolution (USD) by Token</h3>
+      <div class=\"chart-wrap\"><canvas id=\"chartTokenPx\"></canvas></div>
+    </div>
+
+    <div class=\"panel\">
+      <h3>Strategy Asset Price Evolution + Fill Markers (Indexed Base = 100)</h3>
+      <div class=\"chart-wrap\"><canvas id=\"chartStrategyPxIndex\"></canvas></div>
+    </div>
+
+    <div class=\"panel\">
       <h3>Portfolio Equity Comparison in USD (Real)</h3>
       <div class=\"chart-wrap\"><canvas id=\"chartUsd\"></canvas></div>
     </div>
@@ -317,6 +377,51 @@ def render_dashboard(monitor_dir: Path) -> str:
       }}));
     }}
 
+    function tokenPriceDatasets() {{
+      const series = payload.token_price_usd || {{}};
+      const tokens = Object.keys(series);
+      return tokens.map((t, i) => ({{
+        label: `${{t}} real price`,
+        data: series[t] || [],
+        borderColor: palette[i % palette.length],
+        borderWidth: 2,
+        tension: 0.15,
+        pointRadius: 0,
+      }}));
+    }}
+
+    function strategyPriceIndexWithFillDatasets() {{
+      const lines = strategies.map((s, i) => ({{
+        label: `${{s}} price index`,
+        data: ((payload.price_index_by_strategy || {{}})[s]) || [],
+        borderColor: palette[i % palette.length],
+        borderWidth: 2,
+        tension: 0.15,
+        pointRadius: 0,
+      }}));
+
+      const markers = strategies.map((s, i) => ({{
+        type: 'line',
+        label: `${{s}} fills`,
+        data: ((payload.fill_markers_index_by_strategy || {{}})[s]) || [],
+        parsing: false,
+        showLine: false,
+        borderColor: palette[i % palette.length],
+        backgroundColor: palette[i % palette.length],
+        pointStyle: 'triangle',
+        pointRadius: (ctx) => {{
+          const fills = Number((ctx.raw || {{}}).fills || 0);
+          return fills > 0 ? Math.min(14, 5 + fills * 1.5) : 0;
+        }},
+        pointHoverRadius: (ctx) => {{
+          const fills = Number((ctx.raw || {{}}).fills || 0);
+          return fills > 0 ? Math.min(18, 6 + fills * 2) : 0;
+        }},
+      }}));
+
+      return [...lines, ...markers];
+    }}
+
     function makeLineChart(canvasId, datasets, yLabel) {{
       new Chart(document.getElementById(canvasId).getContext('2d'), {{
         type: 'line',
@@ -325,6 +430,19 @@ def render_dashboard(monitor_dir: Path) -> str:
           responsive: true,
           maintainAspectRatio: false,
           animation: false,
+          plugins: {{
+            tooltip: {{
+              callbacks: {{
+                label: (ctx) => {{
+                  const raw = ctx.raw || {{}};
+                  if (raw && typeof raw === 'object' && raw.fills) {{
+                    return `${{ctx.dataset.label}}: index=${{ctx.parsed.y}} (fills=${{raw.fills}})`;
+                  }}
+                  return `${{ctx.dataset.label}}: ${{ctx.parsed.y}}`;
+                }}
+              }}
+            }}
+          }},
           scales: {{
             x: {{ ticks: {{ maxTicksLimit: 10 }} }},
             y: {{ title: {{ display: true, text: yLabel }} }}
@@ -333,6 +451,8 @@ def render_dashboard(monitor_dir: Path) -> str:
       }});
     }}
 
+    makeLineChart('chartTokenPx', tokenPriceDatasets(), 'USD');
+    makeLineChart('chartStrategyPxIndex', strategyPriceIndexWithFillDatasets(), 'Index (base=100)');
     makeLineChart('chartUsd', datasetsFromSeries(payload.equity_usd), 'USD');
     makeLineChart('chartBtc', datasetsFromSeries((payload.equity_by_token || {{}}).BTC || {{}}), 'BTC units');
     makeLineChart('chartEth', datasetsFromSeries((payload.equity_by_token || {{}}).ETH || {{}}), 'ETH units');
