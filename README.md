@@ -46,6 +46,18 @@ Outputs:
 - `reports/backtest_summary.json`
 - `reports/equity_curve.png`
 - `reports/prediction_scatter.png`
+- `reports/trade_blotter.csv`
+
+### Multi-variant sweep (for trade frequency and parameter exploration)
+
+```bash
+PYTHONPATH=src ./scripts/simulate_variants.py --flow-csv data/ibit_flows.csv --price-csv data/btc_prices.csv --out-dir reports/variants_fast --confidence-thresholds 0.48,0.50,0.52 --min-abs-return-pcts 0.00,0.02,0.05 --max-positions 1.0 --retrain-every-options 3,7
+```
+
+Outputs:
+
+- `reports/variants_fast/variant_results.csv`
+- `reports/variants_fast/leaderboard_top20.csv`
 
 ## Process diagram
 
