@@ -1,0 +1,28 @@
+[project]
+name = "hv-btc-vault"
+version = "0.1.0"
+description = "Daily BTC strategy runner for Hyperliquid vault"
+requires-python = ">=3.10"
+dependencies = [
+  "hyperliquid-python-sdk",
+  "pydantic",
+  "pydantic-settings",
+  "python-dotenv",
+  "tenacity",
+  "requests",
+  "numpy",
+  "pandas",
+  "scikit-learn",
+  "joblib",
+  "matplotlib",
+  "lxml",
+  "html5lib",
+  "beautifulsoup4"
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

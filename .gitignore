@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.pytest_cache/
+
+# Virtual env
+.venv/
+
+# Local env/secrets
+.env
+
+# Build artifacts
+src/*.egg-info/
+src/hv_btc_vault.egg-info/
+
+# Generated runtime artifacts
+logs/
+models/
+reports/
+data/btc_prices.csv
+data/forecast.json
+
+# OS/editor
+.DS_Store
+
+# Local photos
+IMG_*.JPG

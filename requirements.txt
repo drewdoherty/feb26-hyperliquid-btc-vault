@@ -1,0 +1,15 @@
+hyperliquid-python-sdk
+pydantic
+pydantic-settings
+python-dotenv
+tenacity
+requests
+numpy
+pandas
+scikit-learn
+joblib
+matplotlib
+lxml
+html5lib
+beautifulsoup4
+pytest
